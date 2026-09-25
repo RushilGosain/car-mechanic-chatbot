@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "django": "^99.99.99",
+    "dotenv": "^18.0.3"
+  }
+}

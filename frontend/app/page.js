@@ -1,10 +1,11 @@
 "use client";
 
+
 import { useRef, useState } from "react";
 import MessageBubble from "@/components/MessageBubble";
 import AttachmentControls from "@/components/AttachmentControls";
 import BookingModal from "@/components/BookingModal";
-import { sendChatMessage, uploadMedia, requestDiagnosis, createBooking } from "@/lib/api";
+import { sendChatMessage, uploadMedia, requestDiagnosis, createBooking, getBooking} from "@/lib/api";
 
 function timeLabel(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

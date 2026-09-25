@@ -524,8 +524,9 @@ This endpoint is also used by the frontend to restore a conversation after reloa
 
 The main chatbot interface where users describe their vehicle problem and answer guided follow-up questions.
 
-![Torque Chat Interface]( <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 09 13 AM" src="https://github.com/user-attachments/assets/1f09cbeb-7bc6-4345-8462-e3ae5a218448" />
-)
+![Torque Chat Interface]
+ <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 09 13 AM" src="https://github.com/user-attachments/assets/1f09cbeb-7bc6-4345-8462-e3ae5a218448" />
+
 
 ---
 
@@ -533,8 +534,9 @@ The main chatbot interface where users describe their vehicle problem and answer
 
 The diagnosis screen showing the probable issue, possible causes, suggested repair, and confidence.
 
-![Torque AI Diagnosis]( <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 09 50 AM" src="https://github.com/user-attachments/assets/7d42524e-7f2f-4816-bf1e-c80ac30070b7" />
- )
+![Torque AI Diagnosis]
+ <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 09 50 AM" src="https://github.com/user-attachments/assets/7d42524e-7f2f-4816-bf1e-c80ac30070b7" />
+ 
 
 ---
 
@@ -542,8 +544,9 @@ The diagnosis screen showing the probable issue, possible causes, suggested repa
 
 The mechanic booking interface where users provide their details and preferred appointment date.
 
-![Torque Mechanic Booking]( <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 10 40 AM" src="https://github.com/user-attachments/assets/e6e2e488-68c9-4898-b6f7-3917a6afa8f3" />
- )
+![Torque Mechanic Booking]
+<img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 10 40 AM" src="https://github.com/user-attachments/assets/e6e2e488-68c9-4898-b6f7-3917a6afa8f3" />
+ 
 
 
 ---

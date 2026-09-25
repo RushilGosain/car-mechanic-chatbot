@@ -257,7 +257,7 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000",
+        "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173",
     ).split(",")
     if origin.strip()
 ]
@@ -272,12 +272,11 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
-        "CSRF_TRUSTED_ORIGINS",
-        "http://localhost:3000",
+        "CORS_ALLOWED_ORIGINS",
+        "",
     ).split(",")
     if origin.strip()
 ]
-
 
 # ---------------------------------------------------------
 # PRODUCTION SECURITY

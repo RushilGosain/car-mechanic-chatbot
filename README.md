@@ -1,6 +1,5 @@
 # 🔧 Torque — AI Car Mechanic Chatbot
 
-> **Full-Stack Development Internship Assignment — Instant Mechanic**
 
 Torque is a full-stack AI-assisted car mechanic chatbot that helps car owners describe vehicle problems, answer guided follow-up questions, receive a probable diagnosis, upload supporting images, and book a mechanic.
 

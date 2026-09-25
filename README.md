@@ -1,219 +1,883 @@
-# Torque — AI Car Mechanic Chatbot
+# 🔧 Torque — AI Car Mechanic Chatbot
 
-A full-stack chatbot where a car owner describes a problem, gets guided
-follow-up questions, an AI-assisted diagnosis, and can book a mechanic —
-built for the 48-hour Full-Stack Developer Intern task.
+> **Full-Stack Development Internship Assignment — Instant Mechanic**
 
-**Stack:** Next.js (React) frontend · Django REST Framework + SQLite backend ·
-Gemini API used only for diagnosis synthesis and image analysis.
+Torque is a full-stack AI-assisted car mechanic chatbot that helps car owners describe vehicle problems, answer guided follow-up questions, receive a probable diagnosis, upload supporting images, and book a mechanic.
 
----
-
-## 1. Architecture
-
-```
-┌────────────────┐        REST/JSON         ┌──────────────────────┐
-│  Next.js (UI)   │ ───────────────────────▶ │  Django REST backend  │
-│  Vercel         │ ◀─────────────────────── │  AWS (EC2/Elastic     │
-└────────────────┘                           │  Beanstalk) + SQLite  │
-                                              └──────────┬────────────┘
-                                                          │ only when needed
-                                                          ▼
-                                                   Gemini API (free tier)
-```
-
-**Why it's split this way**
-
-- **Rule engine first, AI last.** `chatbot/rules.py` handles topic filtering
-  (is this a car question?), greeting detection, and a keyword-driven
-  follow-up-question tree for common symptom categories (won't start,
-  noise, overheating, brakes, AC, warning lights). None of that calls
-  Gemini. `POST /api/chat/` never touches the AI model.
-- **Gemini is called in exactly two places:** `POST /api/diagnosis/`
-  (synthesizes the full conversation into a diagnosis) and image uploads
-  in `POST /api/upload/` (visual inspection of a photo). Audio/video
-  uploads are stored and flagged for technician review rather than run
-  through AI, since transcribing/understanding them reliably needs more
-  infrastructure than a 48-hour scope allows — noted here rather than
-  faked.
-- **Graceful degradation.** If `GEMINI_API_KEY` is unset or the API call
-  fails for any reason, `gemini_service.py` falls back to a deterministic,
-  rule-based diagnosis so the whole flow still works end-to-end without a
-  key (useful for grading/demoing without needing credentials).
-
-**Data model:** `Conversation` → has many `Message`s and `MediaUpload`s →
-produces `Diagnosis` → optionally produces a `Booking`.
+The application is designed with a **rule-engine-first architecture**, using AI only where it adds meaningful value. This keeps routine conversations fast, predictable, and cost-efficient while still using Gemini for diagnosis synthesis and image analysis.
 
 ---
 
-## 2. Project structure
+## 🚗 Project Overview
 
+When a car owner experiences a problem, they may not know what information is important to provide to a mechanic.
+
+Torque solves this by providing a conversational workflow:
+
+```text
+User describes car problem
+          ↓
+Topic & symptom detection
+          ↓
+Guided follow-up questions
+          ↓
+Conversation analysis
+          ↓
+AI-assisted diagnosis
+          ↓
+Probable causes + suggested repair
+          ↓
+Book a mechanic
 ```
+
+The application supports common vehicle issues such as:
+
+* 🚘 Car won't start
+* 🔊 Unusual noises
+* 🌡️ Engine overheating
+* 🛑 Brake problems
+* ❄️ AC problems
+* ⚠️ Warning lights
+* 🔧 Other common vehicle-related symptoms
+
+---
+
+# ✨ Key Features
+
+### 💬 Intelligent Chat Flow
+
+Users can describe their car problem naturally through a conversational interface.
+
+The application identifies common automotive symptoms and asks relevant follow-up questions before generating a diagnosis.
+
+### 🧠 Rule-Based Conversation Engine
+
+Routine conversation does not require an AI API call.
+
+The backend contains a rule engine responsible for:
+
+* Detecting whether the query is car-related
+* Greeting detection
+* Identifying common symptom categories
+* Selecting relevant follow-up questions
+* Determining when enough information has been collected
+
+This makes the chatbot faster and reduces unnecessary AI API usage.
+
+### 🤖 AI-Assisted Diagnosis
+
+Once the required information has been collected, Gemini is used to synthesize the conversation into:
+
+* Diagnosis summary
+* Probable causes
+* Suggested repair
+* Confidence level
+
+### 🖼️ Image Analysis
+
+Users can upload an image related to their car problem.
+
+Gemini can analyze supported images and provide an inspection note that can assist with the diagnosis.
+
+### 📎 Media Uploads
+
+The application supports:
+
+* Images
+* Audio
+* Video
+
+Images are analyzed using AI.
+
+Audio and video files are stored and flagged for technician review rather than pretending to provide unsupported AI analysis.
+
+### 👨‍🔧 Mechanic Booking
+
+After receiving a diagnosis, users can book a mechanic by providing:
+
+* Customer name
+* Phone number
+* Preferred date
+* Additional notes
+
+The booking is stored in the backend and receives a booking ID and status.
+
+### 🔄 Conversation Persistence
+
+Conversations, messages, media uploads, diagnoses, and bookings are stored in the backend.
+
+The frontend can also reload an existing conversation using the conversation endpoint.
+
+### 🛡️ Graceful AI Fallback
+
+The application does not completely depend on Gemini.
+
+If:
+
+* The Gemini API key is missing
+* The API request fails
+* The API quota is unavailable
+* Another AI-related error occurs
+
+the backend falls back to a deterministic rule-based diagnosis.
+
+This allows the complete application flow to continue working without an active AI API key.
+
+---
+
+# 🏗️ Architecture
+
+```text
+┌─────────────────────────┐
+│                         │
+│      Next.js Frontend   │
+│        React UI         │
+│                         │
+└────────────┬────────────┘
+             │
+             │ REST / JSON
+             ▼
+┌─────────────────────────┐
+│                         │
+│    Django REST API      │
+│                         │
+│  ┌───────────────────┐  │
+│  │   Rule Engine     │  │
+│  │                   │  │
+│  │ Topic Detection   │  │
+│  │ Follow-ups        │  │
+│  │ Greetings         │  │
+│  └───────────────────┘  │
+│                         │
+│  ┌───────────────────┐  │
+│  │   Gemini Service  │  │
+│  │                   │  │
+│  │ Diagnosis         │  │
+│  │ Image Analysis    │  │
+│  └───────────────────┘  │
+│                         │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│        SQLite DB        │
+│                         │
+│ Conversations           │
+│ Messages                │
+│ Media Uploads           │
+│ Diagnoses               │
+│ Bookings                │
+└─────────────────────────┘
+```
+
+---
+
+# 🧩 Architecture Decisions
+
+## 1. Rule Engine First, AI Last
+
+One of the main design decisions was to avoid sending every user message to Gemini.
+
+The file:
+
+```text
+backend/chatbot/rules.py
+```
+
+handles:
+
+* Topic filtering
+* Greeting detection
+* Symptom classification
+* Follow-up questions
+* Conversation flow
+
+Therefore:
+
+```text
+POST /api/chat/
+```
+
+does **not** call Gemini.
+
+This reduces:
+
+* API usage
+* Response latency
+* AI costs
+* Unnecessary model dependency
+
+---
+
+## 2. Gemini Only Where AI Adds Value
+
+Gemini is used in two primary situations:
+
+### Diagnosis
+
+```text
+POST /api/diagnosis/
+```
+
+The complete conversation is passed to the Gemini service to generate an AI-assisted diagnosis.
+
+### Image Analysis
+
+```text
+POST /api/upload/
+```
+
+When the uploaded media is an image, Gemini can analyze the image and generate an inspection note.
+
+---
+
+## 3. Graceful Degradation
+
+AI services can fail because of:
+
+* API limits
+* Invalid API keys
+* Network problems
+* Service availability
+
+Therefore, Gemini calls are wrapped with error handling.
+
+If Gemini fails, the application uses a deterministic fallback diagnosis instead of breaking the user flow.
+
+---
+
+# 🗂️ Data Model
+
+The application follows the following relationship:
+
+```text
+Conversation
+     │
+     ├── Messages
+     │
+     ├── MediaUploads
+     │
+     └── Diagnosis
+             │
+             └── Booking
+```
+
+### Conversation
+
+Stores the user's active chatbot session.
+
+### Message
+
+Stores user and bot messages associated with a conversation.
+
+### MediaUpload
+
+Stores uploaded image, audio, or video files.
+
+### Diagnosis
+
+Stores:
+
+* Summary
+* Probable causes
+* Suggested repair
+* Confidence
+* Whether AI was used
+
+### Booking
+
+Stores mechanic booking information and booking status.
+
+---
+
+# 🛠️ Tech Stack
+
+## Frontend
+
+| Technology | Purpose                   |
+| ---------- | ------------------------- |
+| Next.js    | Frontend framework        |
+| React      | UI development            |
+| JavaScript | Application logic         |
+| CSS        | Styling and responsive UI |
+
+## Backend
+
+| Technology            | Purpose           |
+| --------------------- | ----------------- |
+| Django                | Backend framework |
+| Django REST Framework | REST APIs         |
+| Python                | Backend logic     |
+| SQLite                | Database          |
+| Gunicorn              | Production server |
+
+## AI
+
+| Technology        | Purpose             |
+| ----------------- | ------------------- |
+| Google Gemini API | Diagnosis synthesis |
+| Google Gemini API | Image analysis      |
+
+## Development
+
+| Tool   | Purpose             |
+| ------ | ------------------- |
+| Git    | Version control     |
+| GitHub | Repository hosting  |
+| Vercel | Frontend deployment |
+| AWS    | Backend deployment  |
+
+---
+
+# 📁 Project Structure
+
+```text
 car-mechanic-chatbot/
+│
 ├── backend/
 │   ├── manage.py
 │   ├── requirements.txt
 │   ├── .env.example
-│   ├── mechanic_backend/        # settings, urls, wsgi/asgi
-│   └── chatbot/                 # the one Django app
+│   │
+│   ├── mechanic_backend/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   ├── wsgi.py
+│   │   └── asgi.py
+│   │
+│   └── chatbot/
 │       ├── models.py
-│       ├── rules.py             # traditional/keyword logic
-│       ├── gemini_service.py    # the only place AI is called
-│       ├── views.py             # 5 required API endpoints
+│       ├── rules.py
+│       ├── gemini_service.py
+│       ├── views.py
 │       ├── serializers.py
 │       └── urls.py
+│
 └── frontend/
-    ├── app/                     # Next.js App Router (page.js, layout.js, globals.css)
-    ├── components/              # MessageBubble, AttachmentControls, BookingModal
-    ├── lib/api.js                # fetch wrapper for the backend
-    └── .env.local.example
+    ├── app/
+    │   ├── page.js
+    │   ├── layout.js
+    │   └── globals.css
+    │
+    ├── components/
+    │   ├── MessageBubble
+    │   ├── AttachmentControls
+    │   └── BookingModal
+    │
+    └── lib/
+        └── api.js
 ```
 
 ---
 
-## 3. Run it locally
+# 🔌 API Documentation
 
-### Backend
+Base URL:
 
-```bash
-cd backend
-python -m venv venv
-
-        # Windows: venv\Scripts\activate
-
-pip install -r requirements.txt
-
-cp .env.example .env
-# open .env and set SECRET_KEY to any random string.
-# leave GEMINI_API_KEY blank to use the rule-based fallback diagnosis,
-# or paste a real key from https://aistudio.google.com/app/apikey
-
-python3 manage.py migrate
-python3 manage.py createsuperuser   # optional, for /admin/
-python3 manage.py runserver          # http://127.0.0.1:8000
+```text
+/api/
 ```
 
-Libraries installed by `requirements.txt`: `Django`, `djangorestframework`,
-`django-cors-headers`, `python-dotenv`, `google-generativeai`, `Pillow`,
-`gunicorn`, `whitenoise`.
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-
-cp .env.local.example .env.local
-# NEXT_PUBLIC_API_BASE_URL should point at your backend, e.g.
-# http://127.0.0.1:8000/api for local dev
-
-npm run dev    # http://localhost:3000
-```
-
-With both running, open `http://localhost:3000`, describe a car problem,
-answer the follow-ups, click **Get diagnosis**, then **Book mechanic**.
-
----
-
-## 4. API documentation
-
-Base URL: `/api/`
+## 1. Chat
 
 ### `POST /api/chat/`
-Send a chat message; creates a conversation on first call.
 
-Request:
-```json
-{ "conversation_id": "uuid, omit on first message", "message": "my brakes are squealing" }
-```
-Response:
-```json
-{ "conversation_id": "uuid", "bot_reply": "text", "ready_for_diagnosis": false }
-```
+Sends a message to the chatbot and continues the guided conversation.
 
-### `POST /api/upload/`  (multipart/form-data)
-Fields: `conversation_id`, `media_type` (`image`/`audio`/`video`), `file`.
-Returns the stored `MediaUpload` including an `analysis_note` (AI-generated
-for images, a stock note for audio/video).
+### Request
 
-### `POST /api/diagnosis/`
-```json
-{ "conversation_id": "uuid" }
-```
-Returns a `Diagnosis`: `summary`, `probable_causes`, `suggested_repair`,
-`confidence`, `used_ai` (whether Gemini or the fallback produced it).
-
-### `POST /api/booking/`
 ```json
 {
   "conversation_id": "uuid",
-  "customer_name": "Rushil Sharma",
-  "phone_number": "98XXXXXXXX",
-  "preferred_date": "2026-10-01",
-  "notes": "optional"
+  "message": "My brakes are making a squealing noise"
 }
 ```
-Returns the created `Booking` with its `id` and `status`.
+
+`conversation_id` can be omitted for the first message.
+
+### Response
+
+```json
+{
+  "conversation_id": "uuid",
+  "bot_reply": "How long have you been experiencing the squealing?",
+  "ready_for_diagnosis": false
+}
+```
+
+---
+
+## 2. Upload Media
+
+### `POST /api/upload/`
+
+Uploads an image, audio, or video associated with a conversation.
+
+### Content Type
+
+```text
+multipart/form-data
+```
+
+### Fields
+
+```text
+conversation_id
+media_type
+file
+```
+
+Supported media types:
+
+```text
+image
+audio
+video
+```
+
+For images, Gemini can provide an AI-generated analysis note.
+
+Audio and video uploads are stored for technician review.
+
+---
+
+## 3. Generate Diagnosis
+
+### `POST /api/diagnosis/`
+
+Generates a diagnosis from the collected conversation.
+
+### Request
+
+```json
+{
+  "conversation_id": "uuid"
+}
+```
+
+### Response
+
+```json
+{
+  "summary": "The symptoms are consistent with worn brake pads.",
+  "probable_causes": [
+    "Worn brake pads",
+    "Brake rotor surface wear"
+  ],
+  "suggested_repair": "Inspect the brake pads and rotors and replace worn components.",
+  "confidence": 0.85,
+  "used_ai": true
+}
+```
+
+---
+
+## 4. Book Mechanic
+
+### `POST /api/booking/`
+
+Creates a mechanic booking.
+
+### Request
+
+```json
+{
+  "conversation_id": "uuid",
+  "customer_name": "Customer Name",
+  "phone_number": "98XXXXXXXX",
+  "preferred_date": "2026-10-01",
+  "notes": "Optional notes"
+}
+```
+
+### Response
+
+Returns the created booking with:
+
+* Booking ID
+* Booking status
+* Customer details
+* Preferred date
+
+---
+
+## 5. Get Booking Status
 
 ### `GET /api/booking/{id}/`
-Returns the current status of a booking.
 
-### `GET /api/conversation/{id}/`  (bonus, used by the frontend for reload)
-Returns the conversation with its full message history.
+Returns the current status of a mechanic booking.
 
 ---
 
-## 5. Deploying live
+## 6. Get Conversation
 
-### Backend → AWS free tier (EC2, simplest path)
+### `GET /api/conversation/{id}/`
 
-1. Launch a `t2.micro`/`t3.micro` Ubuntu EC2 instance (free tier eligible).
-2. SSH in, install Python 3.11+, then:
-   ```bash
-   git clone <your-repo-url>
-   cd car-mechanic-chatbot/backend
-   python3 -m venv venv && source venv/bin/activate
-   pip install -r requirements.txt
-   cp .env.example .env   # fill SECRET_KEY, GEMINI_API_KEY, and:
-   # DEBUG=False
-   # ALLOWED_HOSTS=your-ec2-public-dns-or-ip
-   # CORS_ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
-   python manage.py migrate
-   python manage.py collectstatic --noinput
-   ```
-3. Run it with Gunicorn behind the instance's security group opened on
-   port 8000 (or put Nginx in front on port 80):
-   ```bash
-   gunicorn mechanic_backend.wsgi:application --bind 0.0.0.0:8000
-   ```
-   For a persistent process, run this via `systemd` or `tmux`/`screen` so
-   it survives your SSH session ending.
-4. Open port 8000 (or 80/443 if using Nginx + a domain) in the EC2
-   security group. Your live backend URL is `http://<ec2-ip>:8000/api/`.
-5. SQLite's file (`db.sqlite3`) lives on the instance's disk — fine for
-   this scope; note in your submission that a managed Postgres (RDS free
-   tier) would be the production upgrade.
+Returns the conversation and its message history.
 
-### Frontend → Vercel free tier
-
-1. Push the `frontend/` folder to GitHub (or the whole repo, with
-   Vercel's root directory set to `frontend`).
-2. Import the repo at [vercel.com/new](https://vercel.com/new).
-3. Add an environment variable in the Vercel project settings:
-   `NEXT_PUBLIC_API_BASE_URL = http://<your-ec2-ip>:8000/api` (or your
-   domain/HTTPS URL).
-4. Deploy. Vercel gives you the live frontend URL automatically.
-5. Go back to the backend `.env` and set `CORS_ALLOWED_ORIGINS` to the
-   exact Vercel URL, then restart Gunicorn.
+This endpoint is also used by the frontend to restore a conversation after reload.
 
 ---
 
-## 6. Notes on AI usage (per the evaluation criteria)
+# 🖥️ Screenshots
 
-- Topic filtering, greetings, the follow-up question flow, and booking are
-  all plain Python/keyword logic — no API calls.
-- Gemini is called once per conversation (diagnosis synthesis) and once
-  per image upload — never for routine conversational turns.
-- Every Gemini call is wrapped in a try/except with a deterministic
-  fallback, so a quota limit or bad key degrades the experience instead
-  of breaking the app.
+## 1. Chat Interface
+
+The main chatbot interface where users describe their vehicle problem and answer guided follow-up questions.
+
+![Torque Chat Interface]( <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 09 13 AM" src="https://github.com/user-attachments/assets/1f09cbeb-7bc6-4345-8462-e3ae5a218448" />
+)
+
+---
+
+## 2. AI Diagnosis
+
+The diagnosis screen showing the probable issue, possible causes, suggested repair, and confidence.
+
+![Torque AI Diagnosis]( <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 09 50 AM" src="https://github.com/user-attachments/assets/7d42524e-7f2f-4816-bf1e-c80ac30070b7" />
+ )
+
+---
+
+## 3. Mechanic Booking
+
+The mechanic booking interface where users provide their details and preferred appointment date.
+
+![Torque Mechanic Booking]( <img width="1470" height="804" alt="Screenshot 2026-09-25 at 1 10 40 AM" src="https://github.com/user-attachments/assets/e6e2e488-68c9-4898-b6f7-3917a6afa8f3" />
+ )
+
+
+---
+
+# 🚀 Running the Project Locally
+
+## Prerequisites
+
+Make sure the following are installed:
+
+* Python 3.11+
+* Node.js
+* npm
+* Git
+
+---
+
+## Backend Setup
+
+Navigate to the backend:
+
+```bash
+cd backend
+```
+
+Create a virtual environment:
+
+```bash
+python3 -m venv venv
+```
+
+Activate it.
+
+### macOS / Linux
+
+```bash
+source venv/bin/activate
+```
+
+### Windows
+
+```bash
+venv\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create environment file:
+
+```bash
+cp .env.example .env
+```
+
+Configure the `.env` file:
+
+```env
+SECRET_KEY=your-secret-key
+GEMINI_API_KEY=your-gemini-api-key
+```
+
+Run migrations:
+
+```bash
+python3 manage.py migrate
+```
+
+Start the Django server:
+
+```bash
+python3 manage.py runserver
+```
+
+Backend will run at:
+
+```text
+http://127.0.0.1:8000
+```
+
+---
+
+# 💻 Frontend Setup
+
+Open another terminal and navigate to:
+
+```bash
+cd frontend
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create the environment file:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Set the API URL:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The frontend will run at:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# 🔐 Environment Variables
+
+## Backend
+
+```env
+SECRET_KEY=
+GEMINI_API_KEY=
+DEBUG=
+ALLOWED_HOSTS=
+CORS_ALLOWED_ORIGINS=
+```
+
+## Frontend
+
+```env
+NEXT_PUBLIC_API_BASE_URL=
+```
+
+API keys and secret credentials should **never be committed to GitHub**.
+
+Use `.env.example` files to document required variables without exposing actual credentials.
+
+---
+
+# 🌐 Deployment
+
+## Frontend
+
+The Next.js frontend can be deployed using Vercel.
+
+The frontend requires:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=<production-backend-url>/api
+```
+
+## Backend
+
+The Django REST backend can be deployed using an AWS EC2 instance with Gunicorn.
+
+Example production command:
+
+```bash
+gunicorn mechanic_backend.wsgi:application --bind 0.0.0.0:8000
+```
+
+For a production deployment, the recommended architecture would include:
+
+```text
+Internet
+   │
+   ▼
+Nginx / HTTPS
+   │
+   ▼
+Gunicorn
+   │
+   ▼
+Django REST Framework
+   │
+   ├── PostgreSQL
+   │
+   └── Gemini API
+```
+
+SQLite is sufficient for the scope of this assignment. A managed PostgreSQL database would be a suitable production upgrade.
+
+---
+
+# 🤖 AI Usage
+
+AI was intentionally limited to areas where it provides meaningful value.
+
+| Feature                | AI Used? |
+| ---------------------- | -------- |
+| Greeting detection     | ❌        |
+| Topic filtering        | ❌        |
+| Symptom classification | ❌        |
+| Follow-up questions    | ❌        |
+| Conversation handling  | ❌        |
+| Diagnosis synthesis    | ✅ Gemini |
+| Image analysis         | ✅ Gemini |
+| Booking                | ❌        |
+| Booking status         | ❌        |
+
+This approach avoids unnecessary AI calls during normal conversation.
+
+### AI Call Strategy
+
+```text
+User Message
+     │
+     ▼
+Rule Engine
+     │
+     ├── Common conversation → No AI
+     │
+     └── Diagnosis required
+              │
+              ▼
+          Gemini API
+              │
+              ▼
+        Structured Diagnosis
+```
+
+---
+
+# ⚠️ Limitations
+
+The application was developed within the scope and time constraints of the assignment.
+
+Current limitations include:
+
+* Diagnosis is intended as an initial AI-assisted assessment, not a replacement for professional mechanical inspection.
+* Audio and video files are stored for technician review rather than processed by AI.
+* SQLite is suitable for the current assignment scope but would be replaced with a managed relational database for a larger production deployment.
+* Authentication and role-based access can be expanded for a production mechanic/customer platform.
+* File storage can be migrated to object storage such as Amazon S3 for production usage.
+
+---
+
+# 🔮 Future Improvements
+
+Potential production improvements include:
+
+* 👤 Customer and mechanic authentication
+* 👨‍🔧 Mechanic dashboard
+* 📅 Real-time mechanic availability
+* 📍 Location-based mechanic matching
+* 🔔 Booking notifications
+* 💳 Online payments
+* 🗄️ PostgreSQL / managed database
+* ☁️ S3-based media storage
+* 🎙️ Speech-to-text for audio uploads
+* 🎥 Video analysis
+* 📊 Admin analytics dashboard
+* 🔐 More granular authentication and authorization
+* 🚀 Background processing for AI and media tasks
+
+---
+
+# 🧪 Testing
+
+The API endpoints can be tested using tools such as Postman.
+
+The primary flow to test is:
+
+```text
+POST /api/chat/
+        ↓
+POST /api/chat/
+        ↓
+POST /api/upload/
+        ↓
+POST /api/diagnosis/
+        ↓
+POST /api/booking/
+        ↓
+GET /api/booking/{id}/
+```
+
+The frontend also consumes the same REST APIs through the API wrapper located at:
+
+```text
+frontend/lib/api.js
+```
+
+---
+
+# 📌 Assignment Requirements Covered
+
+| Requirement                | Implementation                           |
+| -------------------------- | ---------------------------------------- |
+| Full-stack application     | Next.js + Django REST                    |
+| Conversational interface   | Rule-based chatbot                       |
+| Guided follow-up questions | Symptom-specific question tree           |
+| AI diagnosis               | Gemini API                               |
+| Image analysis             | Gemini API                               |
+| Media uploads              | Image / Audio / Video                    |
+| Mechanic booking           | Booking API + UI                         |
+| Persistent data            | SQLite + Django models                   |
+| REST APIs                  | Django REST Framework                    |
+| Error handling             | Gemini fallback mechanism                |
+| Responsive frontend        | Next.js UI                               |
+| Documentation              | API + architecture + setup documentation |
+
+---
+
+# 👨‍💻 Developer
+
+**Rushil Gosain**
+
+B.Tech — Computer Science & Engineering
+
+### GitHub
+
+https://github.com/RushilGosain
+
+### Portfolio
+
+https://rushil-ai-portfolio.netlify.app/
+
+### Project Repository
+
+https://github.com/RushilGosain/car-mechanic-chatbot
+
+---
+
+# 📄 License
+
+This project was developed as part of a **Full-Stack Development Internship assignment for Instant Mechanic**.

@@ -5,6 +5,7 @@ Django settings for the AI Car Mechanic Chatbot backend.
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 
@@ -28,7 +29,7 @@ load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv(
     "SECRET_KEY",
-    "insecure-dev-key-change-me"
+    "insecure-dev-key-change-me",
 )
 
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
@@ -37,7 +38,7 @@ ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
         "ALLOWED_HOSTS",
-        "127.0.0.1,localhost"
+        "127.0.0.1,localhost",
     ).split(",")
     if host.strip()
 ]
@@ -101,13 +102,20 @@ ROOT_URLCONF = "mechanic_backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
+
         "DIRS": [],
+
         "APP_DIRS": True,
+
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
+
                 "django.template.context_processors.request",
+
                 "django.contrib.auth.context_processors.auth",
+
+                # Required by Django admin
                 "django.contrib.messages.context_processors.messages",
             ],
         },
@@ -126,12 +134,23 @@ WSGI_APPLICATION = "mechanic_backend.wsgi.application"
 # DATABASE
 # ---------------------------------------------------------
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # ---------------------------------------------------------
@@ -238,22 +257,53 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000"
+        "http://localhost:3000",
     ).split(",")
     if origin.strip()
 ]
 
-# Allow all origins during local development.
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+
+# ---------------------------------------------------------
+# CSRF TRUSTED ORIGINS
+# ---------------------------------------------------------
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost:3000",
+    ).split(",")
+    if origin.strip()
+]
+
+
+# ---------------------------------------------------------
+# PRODUCTION SECURITY
+# ---------------------------------------------------------
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = (
+        "HTTP_X_FORWARDED_PROTO",
+        "https",
+    )
+
+    SESSION_COOKIE_SECURE = True
+
+    CSRF_COOKIE_SECURE = True
 
 
 # ---------------------------------------------------------
 # GEMINI API
 # ---------------------------------------------------------
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_API_KEY = os.getenv(
+    "GEMINI_API_KEY",
+    "",
+)
 
 print(
     "Gemini API key loaded:",
-    "YES" if GEMINI_API_KEY else "NO"
+    "YES" if GEMINI_API_KEY else "NO",
 )

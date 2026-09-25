@@ -1,8 +1,0 @@
-Django==5.2.17
-djangorestframework==3.15.1
-django-cors-headers==4.3.1
-python-dotenv==1.0.1
-google-genai
-Pillow==12.3.0
-gunicorn==22.0.0
-whitenoise==6.6.0

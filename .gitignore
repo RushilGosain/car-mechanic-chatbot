@@ -48,3 +48,13 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+cat >> .gitignore <<'EOF'
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# VS Code Local History
+.history/
+EOF
